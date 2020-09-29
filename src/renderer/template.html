@@ -1,0 +1,166 @@
+<v-app id="app">
+
+  <v-toolbar color="indigo" dark fixed app>
+    <v-toolbar-title>Address Agent</v-toolbar-title>
+    <v-spacer></v-spacer>
+    <v-spacer></v-spacer>
+
+    <v-toolbar-title style="width:13%;">  {{total | currency}}</v-toolbar-title>
+    <v-spacer></v-spacer>
+    <v-toolbar-items class="hidden-sm-and-down">
+      <v-btn flat @click="saveCookie">
+        <v-icon dark>save</v-icon>&nbsp;&nbsp;Save
+      </v-btn>
+    </v-toolbar-items>
+    <a href="" download="addressBook.json" hidden ref="downloadLink">download JSON</a>
+    <v-btn color="indigo" dark @click="exportAddressBook" download="data.json">
+      <v-icon dark>mdi-file-export</v-icon>&nbsp;Export
+    </v-btn>
+    <v-btn color="indigo" dark @click="importAddressBook">
+      <v-icon dark>mdi-file-import</v-icon>&nbsp;Import
+    </v-btn>
+  </v-toolbar>
+
+  <v-content>
+    <v-container fluid fill-height>
+      <v-layout justify-center align-center>
+        <v-card-text style="height:90%; position: relative">
+          <form enctype="multipart/form-data">
+            <div class="dropbox">
+              <input type="file" hidden ref="inputBtn" @change="filesChange($event); fileCount = $event.target.files.length" class="input-file">
+            </div>
+          </form>
+          <!-- <v-btn color="red" @click="testerButton" dark absolute bottom left>
+            <v-icon>add</v-icon>
+          </v-btn> -->
+          <v-btn color="green" dark absolute bottom right @click="addDialog = true">
+            <v-icon>add</v-icon>
+          </v-btn>
+          <v-dialog v-model="addDialog" persistent max-width="500px">
+            <v-card>
+              <v-card-title>
+                <span class="headline">Add Address</span>
+              </v-card-title>
+              <v-card-text>
+                <v-container grid-list-md>
+                  <v-layout wrap>
+                    <v-flex xs12 sm6 md5>
+
+                      <v-select label="Coin" v-bind:items="supportedCoins" v-model="newCoin" item-text="symbol" item-value="symbol" chips required max-height="auto" autocomplete>
+                        <template slot="selection" slot-scope="data">
+                            <v-chip @input="data.parent.selectItem(data.item)" :selected="data.selected" >
+                              <v-avatar> <img :src="data.item.avatar"></v-avatar>
+                                {{ data.item.symbol }}
+                            </v-chip>
+                        </template>
+                        <template slot="item" slot-scope="data">
+                          <template>
+                            <v-list-tile-avatar>
+                              <img v-bind:src="data.item.avatar"/>
+                            </v-list-tile-avatar>
+                            <v-list-tile-content>
+                              <v-list-tile-title v-html="data.item.symbol"></v-list-tile-title>
+                              <v-list-tile-sub-title v-html="data.item.name"></v-list-tile-sub-title>
+                            </v-list-tile-content>
+                          </template>
+                        </template>
+                      </v-select>
+
+                    </v-flex>
+                    <v-flex xs12>
+                      <v-text-field label="Address" v-model="newAddress" required></v-text-field>
+                    </v-flex>
+                  </v-layout>
+                </v-container>
+                <small>*indicates required field</small>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="blue darken-1" flat @click.native="addDialog = false">Close</v-btn>
+                <v-btn color="green darken-1" flat @click.native="addAddress(newCoin,newAddress)">Add</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+
+          <v-list two-line>
+            <template v-for="address in addressBook">
+                      <v-subheader v-if="address.header" v-text="address.header"></v-subheader>
+                      <v-divider v-else-if="address.divider" v-bind:inset="address.inset"></v-divider>
+                      <v-list-tile avatar v-else v-bind:key="address.symbol" @click="editAddress(address)">
+                        <v-list-tile-avatar>
+                          <span class="title">{{address.position}}</span>
+                        </v-list-tile-avatar>
+                        <v-list-tile-avatar>
+                          <img v-bind:src="address.avatar">
+                        </v-list-tile-avatar>
+                        <v-list-tile-content>
+                          <v-list-tile-title v-html="address.symbol"></v-list-tile-title>
+                          <v-list-tile-sub-title v-html="address.name +' : '+ address.address"></v-list-tile-sub-title>
+                        </v-list-tile-content>
+                        <v-list-tile-action>
+                          <v-list-tile-title v-html="">{{address.worth | currency}}</v-list-tile-title>
+                        </v-list-tile-action>
+                      </v-list-tile>
+                    </template>
+          </v-list>
+
+          <v-dialog v-model="editAddressDialog" persistent max-width="50%">
+            <v-card>
+              <v-card-title>
+                <span class="title">{{selectedAddress.address}}</span>
+              </v-card-title>
+              <v-card-text>
+                <v-container grid-list-md text-xs-center>
+                  <v-layout row wrap>
+                    <v-flex xs12>
+                      <v-card dark color="primary">
+                        <v-card-text> {{selectedAddress.name}}</v-card-text>
+                      </v-card>
+                    </v-flex>
+                    <v-flex xs6>
+                      <v-card dark color="secondary">
+                        <v-card-text class="px-0">{{selectedAddress.balance}} {{selectedAddress.symbol}}</v-card-text>
+                      </v-card>
+                    </v-flex>
+                    <v-flex xs6>
+                      <v-card dark color="green">
+                        <v-card-text class="px-0">{{selectedAddress.worth | currency}}</v-card-text>
+                      </v-card>
+                    </v-flex>
+                    <v-flex xs12 sm6 md5>
+                    </v-flex>
+                    <v-flex xs12>
+                    </v-flex>
+                  </v-layout>
+                </v-container>
+              </v-card-text>
+              <v-card-actions>
+                <v-btn color="blue darken-1" flat @click.native="editAddressDialog = false">Back</v-btn>
+                <v-spacer></v-spacer>
+                <v-btn color="red darken-1" flat @click.native="removeAddress()">Remove</v-btn>
+
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <v-alert color="error" icon="warning" value="error" v-model="error" dismissible>
+            <template v-for="error in errorMessages">
+              {{error}}
+            </template>
+            </v-alert>
+
+          <v-snackbar color="green" multi-line v-model="snackbar">
+            {{ snackBarText }}
+            <v-btn dark flat @click.native="snackbar = false">Close</v-btn>
+          </v-snackbar>
+
+        </v-card-text>
+      </v-layout>
+    </v-container>
+  </v-content>
+
+  <v-footer color="indigo" app>
+    <span class="white--text">&copy; 2018</span>
+  </v-footer>
+</v-app>
